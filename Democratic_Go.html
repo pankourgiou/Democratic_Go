@@ -1,0 +1,148 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Go Council — play Go against a democracy</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fff;--line:#ddd6c6;--tx:#1d1b16;--mu:#7a7364;--ac:#4f46e5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1017;--card:#171b27;--line:#2a3045;--tx:#e8ebf5;--mu:#8f98b3;--ac:#8b93ff}}
+:root[data-theme="dark"]{--bg:#0e1017;--card:#171b27;--line:#2a3045;--tx:#e8ebf5;--mu:#8f98b3;--ac:#8b93ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+.w{max-width:1100px;margin:auto;padding:16px}
+h1{margin:0;font-size:26px;letter-spacing:-.5px}.mu{color:var(--mu)}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.pill{padding:4px 12px;border-radius:99px;font:600 12px monospace;border:1px solid var(--line);background:var(--card)}
+.think{color:var(--ac);animation:p 1s infinite}@keyframes p{50%{opacity:.45}}
+button,select{font:600 13px system-ui;padding:8px 14px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--tx);cursor:pointer}
+button.pr{background:var(--ac);color:#fff;border-color:var(--ac)}button:disabled{opacity:.4;cursor:default}
+.g{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px}@media(max-width:820px){.g{grid-template-columns:1fr}}
+.c{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+svg#bd{width:100%;height:auto;display:block;border-radius:8px;touch-action:manipulation}
+.tabs{display:flex;gap:4px;margin-bottom:8px}.tabs button{padding:5px 12px;font:600 11px monospace;letter-spacing:1px}.tabs .on{background:var(--ac);color:#fff;border-color:var(--ac)}
+#bl,#feed,#votes,#log{height:470px;overflow:auto;font-size:13px}.m{padding:3px 0}.sys{color:var(--mu);font-style:italic}
+.bg{font:700 10px monospace;padding:1px 6px;border-radius:4px;background:#f59e0b33;color:#d97706;margin-left:4px}
+.row{display:flex;align-items:center;gap:8px;margin:7px 0}.row .bx{flex:1;background:var(--line);border-radius:6px;height:22px;position:relative;overflow:hidden}
+.row .fl{position:absolute;inset:0 auto 0 0;background:var(--ac);opacity:.35}.row .ch{position:absolute;inset:0;display:flex;gap:3px;align-items:center;padding:0 5px}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block}.win{font-weight:800}
+.ban{margin:8px 0;padding:10px 14px;border-radius:10px;background:var(--ac);color:#fff;font-weight:700;display:none}
+.progs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}.pc{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer;font-size:12px;line-height:1.3}.pc input{display:none}.pc .e{font-size:20px}.pc.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,transparent)}
+.bo{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:6px 0;cursor:pointer;font-size:12.5px;line-height:1.35}.bo input{display:none}.bo:has(input:checked){border-color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,transparent)}
+.lt{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--ac);color:#fff;align-items:center;justify-content:center;flex:none}.lab{font-size:12px;font-weight:600;letter-spacing:1px;margin:8px 0}
+.leg{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12px}
+</style></head><body><div class="w">
+<h1>Go Council <span class="mu" style="font-size:14px;font-weight:400">You (Black) vs a democracy of seven voters (White)</span></h1>
+<div class="bar"><span id="stat" class="pill">YOUR MOVE</span><span class="pill" id="sc"></span><select id="sz"><option value="7">7×7</option><option value="9" selected>9×9</option><option value="13">13×13</option></select><button class="pr" id="nw">New game</button><button id="ps">Pass</button></div>
+<div class="ban" id="ban"></div>
+<details class="c" open style="margin-bottom:14px"><summary style="cursor:pointer;font-weight:700">⚙️ Democratic programs — one for you, one for the council</summary>
+<div class="mu lab">YOUR PROGRAM (BLACK) — how your side decides</div><div class="progs" id="plp"></div>
+<div class="mu lab" style="margin-top:12px">COUNCIL'S PROGRAM (WHITE) — how the council decides</div><div class="progs" id="progs"></div></details>
+<div class="g"><div class="c"><svg id="bd"></svg><div class="mu" style="font-size:12px;margin-top:6px">Rules: captures, no suicide, no repeating a position (superko), area scoring, komi 5.5. Two passes end the game. Dead stones aren't auto-removed, so capture what you want gone before passing. Lettered rings are your ballot options; coloured rings show the council's proposals.</div></div>
+<div class="c"><div class="tabs"><button data-t="bl" class="on">BALLOT</button><button data-t="feed">DEBATE</button><button data-t="votes">VOTES</button><button data-t="log">MOVES</button></div><div id="bl"></div><div id="feed" hidden></div><div id="votes" hidden></div><div id="log" hidden></div><div class="leg" id="leg"></div></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id),sleep=ms=>new Promise(r=>setTimeout(r,window.FAST?0:ms));
+const LET='ABCDEFGHJKLMN';let mode='dir',bal=null,sel=null;let N,B,turn,ko,caps,moves,passes,over,busy,last,lastH,props,vt,komi=5.5,terr=null,ghost=-1;
+const co=i=>i<0?'Pass':LET[i%N]+(N-((i/N)|0));
+const nb=i=>{const x=i%N,y=(i/N)|0,r=[];if(x)r.push(i-1);if(x<N-1)r.push(i+1);if(y)r.push(i-N);if(y<N-1)r.push(i+N);return r};
+function grp(b,i){const c=b[i],st=[i],seen=new Set([i]),libs=new Set();for(let k=0;k<st.length;k++)for(const j of nb(st[k])){if(b[j]==0)libs.add(j);else if(b[j]==c&&!seen.has(j)){seen.add(j);st.push(j)}}return{st,libs}}
+function play(b,i,c){if(b[i])return null;const n=b.slice();n[i]=c;let cap=0;for(const j of nb(i))if(n[j]==3-c){const g=grp(n,j);if(!g.libs.size){for(const s of g.st)n[s]=0;cap+=g.st.length}}if(!grp(n,i).libs.size)return null;return{b:n,cap}}
+const legal=(b,i,c)=>{const r=play(b,i,c);return r&&!ko.has(r.b.join(''))?r:null};
+function score(b){let bl=0,wh=0;const seen=new Set(),own={};for(let i=0;i<N*N;i++){if(b[i]==1)bl++;else if(b[i]==2)wh++;else if(!seen.has(i)){const st=[i],bd=new Set();seen.add(i);for(let k=0;k<st.length;k++)for(const j of nb(st[k])){if(b[j]==0){if(!seen.has(j)){seen.add(j);st.push(j)}}else bd.add(b[j])}if(bd.size==1){const o=bd.has(1)?1:2;o==1?bl+=st.length:wh+=st.length;st.forEach(j=>own[j]=o)}}}return{bl,wh,own}}
+function feats(b,i,c,ref){const r=legal(b,i,c);if(!r)return null;const o=3-c,x=i%N,y=(i/N)|0,line=Math.min(x,y,N-1-x,N-1-y),g=grp(r.b,i);let atari=0,save=0,conn=0;const sg=new Set();
+for(const j of nb(i)){if(r.b[j]==o){const gg=grp(r.b,j);if(gg.libs.size==1&&!sg.has(gg.st[0])){atari++;sg.add(gg.st[0])}}if(b[j]==c){conn++;const g0=grp(b,j);if(g0.libs.size==1&&g.libs.size>1&&!sg.has('s'+g0.st[0])){save+=g0.st.length;sg.add('s'+g0.st[0])}}}
+let infl=0;for(let yy=Math.max(0,y-2);yy<=Math.min(N-1,y+2);yy++)for(let xx=Math.max(0,x-2);xx<=Math.min(N-1,x+2);xx++){const v=b[yy*N+xx];infl+=v==0?1:v==c?.3:-.5}
+const eye=nb(i).every(j=>b[j]==c)&&!r.cap?1:0,near=ref>=0&&Math.abs(ref%N-x)+Math.abs(((ref/N)|0)-y)<=2?1:0;
+return{cap:r.cap,libs:g.libs.size,self:g.libs.size==1&&!r.cap?1:0,atari,save,conn,infl,line,eye,near}}
+const V=[
+{n:'Hawk',c:'#ef4444',s:f=>f.cap*7+f.atari*3.5+f.near*1.2+f.infl*.15-f.self*6-f.eye*6-(f.line?0:2),d:'leans on the opponent'},
+{n:'Guardian',c:'#3b82f6',s:f=>f.save*3+f.libs*.7+f.cap*4-f.self*9-f.eye*6+(f.line?.5:-2)+f.near,d:'keeps our liberties healthy'},
+{n:'Surveyor',c:'#22c55e',s:f=>f.infl*.55+(f.line>=2?1.5:f.line?.6:-2)+f.cap*4-f.self*7-f.eye*6,d:'claims open space'},
+{n:'Weaver',c:'#f59e0b',s:f=>f.conn*1.6+f.libs*.5+f.cap*4+f.save*1.5-f.self*7-f.eye*6-(f.line?0:1.5)+f.infl*.1,d:'keeps the shape together'},
+{n:'Pioneer',c:'#a855f7',s:(f,t)=>(t<N*1.5?(f.line==2||f.line==3?3:f.line==1?.5:-2):f.line?.8:-1)+f.infl*.2+f.cap*4-f.self*7-f.eye*6,d:'takes a key point'},
+{n:'Trickster',c:'#ec4899',s:f=>Math.random()*5+f.cap*4+f.atari*1.5-f.self*7-f.eye*6-(f.line?0:2),d:'has a hunch'},
+{n:'Pragmatist',c:'#06b6d4',s:f=>f.cap*4+f.save*2+f.atari*2+f.libs*.3+f.infl*.25+f.near*.8-f.self*9-f.eye*6+(f.line?.4:-2),d:'is the solid choice'}];
+const PR=[{id:'plur',e:'🗳️',n:'Plurality',d:'Most first-choice votes wins.',pk:1},{id:'run',e:'🥈',n:'Runoff',d:'No majority? Top two face off and everyone picks their favourite of the two.',pk:1},{id:'irv',e:'🔢',n:'Ranked choice',d:'Drop the least-loved move each round until one has a majority.'},{id:'bor',e:'🏅',n:'Borda count',d:'Every rank on every ballot earns points.'},{id:'app',e:'✅',n:'Approval',d:'Approve every move that is nearly as good as your favourite.'},{id:'con',e:'🤝',n:'Consensus',d:'Play the move the most-unhappy voter dislikes least.'},{id:'wgt',e:'🎓',n:'Expert weighting',d:'A voter counts more when they are more confident.',pk:1},{id:'dic',e:'👑',n:'Rotating dictator',d:'One voter decides alone each turn.',pk:1},{id:'lot',e:'🎲',n:'Lottery',d:"A randomly drawn voter's favourite is played.",pk:1}];let prg='plur';
+$('progs').innerHTML=PR.map(p=>`<label class="pc${p.id==prg?' on':''}"><input type="radio" name="prg" value="${p.id}" ${p.id==prg?'checked':''}><span class="e">${p.e}</span><span><b>${p.n}</b><br><span class="mu">${p.d}</span></span></label>`).join('');
+$('progs').onchange=e=>{prg=e.target.value;document.querySelectorAll('.pc').forEach(l=>l.classList.toggle('on',l.querySelector('input').checked));const p=PR.find(x=>x.id==prg);say('System',`Program changed to ${p.e} <b>${p.n}</b>. Applies from the council's next turn.`,'',1)};
+const PL=[{id:'dir',e:'🙋',n:'Direct vote',d:"Pick from your assembly's ballot. Your vote decides."},{id:'asm3',e:'🏛️',n:'Assembly + you (×3)',d:'Seven advisors vote too; your vote counts triple.'},{id:'asm1',e:'👥',n:'Assembly + you (×1)',d:"You're one voter among eight and can be overruled."},{id:'free',e:'✋',n:'Free play',d:'No ballot: click any point yourself.'}];
+$('plp').innerHTML=PL.map(p=>`<label class="pc${p.id==mode?' on':''}"><input type="radio" name="pl" value="${p.id}" ${p.id==mode?'checked':''}><span class="e">${p.e}</span><span><b>${p.n}</b><br><span class="mu">${p.d}</span></span></label>`).join('');
+$('plp').onchange=e=>{mode=e.target.value;document.querySelectorAll('#plp .pc').forEach(l=>l.classList.toggle('on',l.querySelector('input').checked));const p=PL.find(x=>x.id==mode);say('System',`Your program: ${p.e} <b>${p.n}</b>.`,'',1);if(!busy&&!over&&turn==1)openBallot();else if(mode=='free')$('bl').innerHTML='<div class="mu">Free play: click any point on the board.</div>';ui();render()};
+$('leg').innerHTML=V.map(v=>`<span><i class="dot" style="background:${v.c}"></i> ${v.n}</span>`).join('');
+const why=(f,v)=>f.cap?`captures ${f.cap} stone${f.cap>1?'s':''}`:f.save?'rescues a group from atari':f.atari?`puts ${f.atari} group${f.atari>1?'s':''} in atari`:f.conn>1?`connects ${f.conn} friendly stones`:v.n=='Pioneer'?`takes a key point on line ${f.line+1}`:v.d;
+function newGame(){N=+$('sz').value;B=Array(N*N).fill(0);turn=1;ko=new Set([B.join('')]);caps=[0,0,0];moves=[];passes=0;over=false;busy=false;last=-1;lastH=-1;props=new Map();vt=null;terr=null;bal=null;sel=null;$('feed').innerHTML='';$('votes').innerHTML='';$('ban').style.display='none';say('System','The council awaits your move. Seven voters, one board.','#888',1);ui();render();openBallot()}
+function say(n,t,c,sys,badge){const d=document.createElement('div');d.className='m'+(sys?' sys':'');d.innerHTML=(sys?'':`<b style="color:${c}">${n}</b>${badge?'<span class="bg">changed mind</span>':''} `)+t;$('feed').appendChild(d);$('feed').scrollTop=1e9}
+function ui(){const s=score(B),st=$('stat');$('sc').textContent=`Black ${s.bl} · White ${s.wh}+${komi} · captures ● ${caps[1]} ○ ${caps[2]}`;
+st.className='pill'+(busy?' think':'');st.textContent=over?'GAME OVER':busy?'COUNCIL DELIBERATING…':mode=='free'?'YOUR MOVE (BLACK)':'YOUR VOTE (BLACK)';$('ps').disabled=over||busy;
+$('log').innerHTML=moves.map((m,k)=>`<div class="m">${k+1}. ${m.c==1?'●':'○'} <b>${co(m.i)}</b> ${m.v?`<span class="mu">${m.v}</span>`:''}</div>`).join('')}
+function render(){const cs=44,m=34,S=(N-1)*cs+2*m,p=i=>[m+(i%N)*cs,m+((i/N)|0)*cs];let h=`<defs><radialGradient id="kb" cx=".35" cy=".3"><stop offset="0" stop-color="#666"/><stop offset="1" stop-color="#050505"/></radialGradient><radialGradient id="wb" cx=".35" cy=".3"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#cfcfcf"/></radialGradient></defs><rect width="${S}" height="${S}" fill="#dcb35c"/>`;
+for(let k=0;k<N;k++){const a=m+k*cs;h+=`<line x1="${m}" x2="${S-m}" y1="${a}" y2="${a}" stroke="#4a3715" stroke-width="1.2"/><line y1="${m}" y2="${S-m}" x1="${a}" x2="${a}" stroke="#4a3715" stroke-width="1.2"/><text x="${a}" y="16" font-size="12" text-anchor="middle" fill="#4a3715">${LET[k]}</text><text x="12" y="${a+4}" font-size="12" text-anchor="middle" fill="#4a3715">${N-k}</text>`}
+const a=N==7?[2,4]:N==9?[2,6]:[3,9];[...a.flatMap(x=>a.map(y=>[x,y])),[(N-1)/2,(N-1)/2]].forEach(([x,y])=>h+=`<circle cx="${m+x*cs}" cy="${m+y*cs}" r="3.5" fill="#4a3715"/>`);
+B.forEach((v,i)=>{if(!v)return;const[x,y]=p(i);h+=`<circle cx="${x+1.5}" cy="${y+2}" r="19" fill="#0004"/><circle cx="${x}" cy="${y}" r="19" fill="url(#${v==1?'kb':'wb'})"/>`;if(i==last)h+=`<circle cx="${x}" cy="${y}" r="7" fill="none" stroke="${v==1?'#fff':'#000'}" stroke-width="2"/>`});
+if(terr)for(const i in terr){const[x,y]=p(+i);h+=`<rect x="${x-6}" y="${y-6}" width="12" height="12" fill="${terr[i]==1?'#000':'#fff'}" stroke="#0006"/>`}
+props.forEach((vs,i)=>{if(i<0||B[i])return;const[x,y]=p(i);h+=`<circle cx="${x}" cy="${y}" r="15" fill="#fff8" stroke="${V[vs[vs.length-1]].c}" stroke-width="3"/><text x="${x}" y="${y+5}" font-size="14" font-weight="800" text-anchor="middle" fill="#111">${vs.length}</text>`});
+if(bal&&!busy&&!over&&turn==1&&mode!='free')bal.opts.forEach((o,k)=>{if(o.x<0||B[o.x])return;const[x,y]=p(o.x),on=o.x===sel;h+=`<circle cx="${x}" cy="${y}" r="15" fill="${on?'#4f46e5':'#fffd'}" stroke="#4f46e5" stroke-width="3"/><text x="${x}" y="${y+5}" font-size="14" font-weight="800" text-anchor="middle" fill="${on?'#fff':'#222'}">${'ABCDEFGH'[k]}</text>`});
+if(mode=='free'&&ghost>=0&&!busy&&!over&&turn==1&&!B[ghost]){const[x,y]=p(ghost);h+=`<circle cx="${x}" cy="${y}" r="19" fill="#000" opacity=".3"/>`}
+const s=$('bd');s.setAttribute('viewBox',`0 0 ${S} ${S}`);s.innerHTML=h;s.dataset.cs=cs;s.dataset.m=m}
+function commit(i,c,v){if(i<0){passes++;moves.push({c,i,v})}else{const r=play(B,i,c);B=r.b;caps[c]+=r.cap;passes=0;ko.add(B.join(''));last=i;moves.push({c,i,v})}turn=3-c;if(passes>=2)finish();ui();render()}
+function finish(){over=true;busy=false;const s=score(B);terr=s.own;const w=s.wh+komi,d=Math.abs(s.bl-w);$('ban').style.display='block';$('ban').textContent=s.bl>w?`🎉 You win by ${d} points! (Black ${s.bl} vs White ${s.wh}+${komi})`:`🏛️ The council wins by ${d} points. (Black ${s.bl} vs White ${s.wh}+${komi})`;say('System',$('ban').textContent,'',1)}
+function humanPlay(i,v){if(over||busy||turn!=1)return false;if(i==-1){say('You','passes.','#111');lastH=-1;commit(-1,1,v);if(!over)council();return true}
+if(B[i]||!legal(B,i,1)){say('System','Illegal move: occupied, suicide, or repeats a position.','',1);return false}
+props=new Map();lastH=i;commit(i,1,v);council();return true}
+async function council(){busy=true;props=new Map();bal=null;showTab('feed');ui();render();const t0=B.filter(x=>x).length,sc0=score(B),lead=passes==1&&sc0.wh+komi>sc0.bl;
+say('System','Council convenes. Each voter proposes.','',1);
+const cands=[];for(let i=0;i<N*N;i++){const f=feats(B,i,2,lastH);if(f)cands.push([i,f])}const F=new Map(cands);
+const sc=V.map(v=>{const m=new Map();for(const[i,f]of cands)m.set(i,v.s(f,t0)+Math.random()*.7);return m});
+const best=sc.map(m=>{let bi=-1,bv=-1e9;for(const[i,v]of m)if(v>bv){bv=v;bi=i}return[bi,bv]});
+const val=(k,x)=>x<0?(lead?99:1.2):sc[k].get(x)??-99;
+const pick=V.map((v,k)=>lead||!cands.length||best[k][1]<1.2?-1:best[k][0]);
+const sync=()=>{props=new Map();pick.forEach((p,k)=>{if(p>=0){props.set(p,[...(props.get(p)||[]),k])}});render()};
+for(let k=0;k<V.length;k++){const p=pick[k],f=F.get(p);say(V[k].n,p<0?(lead?'You passed and we are ahead — I say we pass and take the win.':'Nothing worth playing. I propose we pass.'):`<b>${co(p)}</b> — ${why(f,V[k])}.`,V[k].c);sync();await sleep(220)}
+const prog=PR.find(p=>p.id==prg),tot=x=>pick.reduce((s,_,k)=>s+val(k,x),0),tally=()=>{const m=new Map();pick.forEach(p=>m.set(p,(m.get(p)||0)+1));return m};
+const lead_=m=>[...m.keys()].sort((a,b)=>m.get(b)-m.get(a)||tot(b)-tot(a))[0],n7=V.length;
+const pool=[...new Set([...sc.flatMap(m=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,3).map(e=>e[0])),...pick.filter(p=>p<0)])],rank=V.map((_,k)=>[...pool].sort((a,b)=>val(k,b)-val(k,a)));
+say('System',`Program: ${prog.e} <b>${prog.n}</b> — ${prog.d}`,'',1);await sleep(260);
+if(['plur','run','wgt'].includes(prog.id)){say('System','Debate: argue and lock in final votes.','',1);await sleep(260);
+const L0=lead_(tally());for(let k=0;k<n7;k++){const m=tally();if(pick[k]!=L0&&m.get(pick[k])<m.get(L0)&&val(k,L0)>=val(k,pick[k])-2.5&&Math.random()<.75){pick[k]=L0;say(V[k].n,`Changed to <b>${co(L0)}</b>.`,V[k].c,0,1);sync()}else say(V[k].n,`Sticking with <b>${co(pick[k])}</b>.`,V[k].c);await sleep(200)}}
+else if(['dic','lot'].includes(prog.id)){say('System','No debate. The council defers to a single voice.','',1);await sleep(300)}
+else{say('System','Ballots are cast.','',1);for(let k=0;k<n7;k++){const r=rank[k];say(V[k].n,prog.id=='app'?`Approves: ${pool.filter(x=>val(k,x)>=val(k,r[0])-2).slice(0,4).map(co).join(', ')}`:`Ballot: ${r.slice(0,3).map(co).join(' › ')}`,V[k].c);await sleep(200)}}
+let W,res=[],msg,vtxt;const R=(x,t,f)=>({x,t,f,ch:pick.map((p,k)=>p==x?k:-1).filter(k=>k>=0)}),top=(m,fn)=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([x,n])=>fn(x,n)),best_=m=>[...m.keys()].sort((a,b)=>m.get(b)-m.get(a)||tot(b)-tot(a))[0];
+if(prog.id=='plur'){const m=tally();W=lead_(m);vtxt=m.get(W)+'/'+n7;msg=`${co(W)} wins ${vtxt} votes.`;res=top(m,(x,n)=>R(x,n,n/n7))}
+else if(prog.id=='run'){const m=tally(),s=[...m.keys()].sort((a,b)=>m.get(b)-m.get(a)||tot(b)-tot(a));
+ if(m.get(s[0])*2>n7||s.length<2){W=s[0];vtxt=m.get(W)+'/'+n7;msg=`${co(W)} has a majority (${vtxt}), so no runoff.`;res=top(m,(x,n)=>R(x,n,n/n7))}
+ else{const[a,b]=s,nA=V.filter((_,k)=>val(k,a)>=val(k,b)).length,nB=n7-nA;W=nA>=nB?a:b;vtxt=Math.max(nA,nB)+'/'+n7+' runoff';msg=`No majority. Runoff: ${co(a)} (${nA}) vs ${co(b)} (${nB}) → ${co(W)} wins.`;res=[R(a,nA,nA/n7),R(b,nB,nB/n7)]}}
+else if(prog.id=='irv'){let alive=new Set(pool),rounds=0,c;for(;;){rounds++;c=new Map([...alive].map(x=>[x,0]));rank.forEach(r=>{const t=r.find(x=>alive.has(x));c.set(t,c.get(t)+1)});const s=[...c].sort((a,b)=>b[1]-a[1]);if(s[0][1]*2>n7||alive.size<2){W=s[0][0];break}const lo=s[s.length-1][1],out=[...c].filter(e=>e[1]==lo).map(e=>e[0]).sort((a,b)=>tot(a)-tot(b))[0];alive.delete(out)}
+ vtxt=c.get(W)+'/'+n7+' IRV';msg=`${co(W)} wins after ${rounds} round${rounds>1?'s':''} (${c.get(W)}/${n7}).`;res=top(new Map([...c].filter(e=>e[1]>0)),(x,n)=>R(x,n,n/n7))}
+else if(prog.id=='bor'){const p=new Map(pool.map(x=>[x,0]));rank.forEach(r=>r.slice(0,5).forEach((x,i)=>p.set(x,p.get(x)+5-i)));W=best_(p);vtxt=p.get(W)+' pts';msg=`${co(W)} wins with ${p.get(W)} Borda points.`;res=top(p,(x,n)=>R(x,n+' pts',n/(5*n7)))}
+else if(prog.id=='app'){const a=new Map(pool.map(x=>[x,0]));V.forEach((_,k)=>pool.forEach(x=>{if(val(k,x)>=val(k,rank[k][0])-2)a.set(x,a.get(x)+1)}));W=best_(a);vtxt=a.get(W)+'/'+n7+' ✓';msg=`${co(W)} is approved by ${a.get(W)}/${n7}.`;res=top(a,(x,n)=>R(x,n+' ✓',n/n7))}
+else if(prog.id=='con'){const g=x=>Math.min(...V.map((_,k)=>val(k,x)-val(k,rank[k][0])));W=[...pool].sort((a,b)=>g(b)-g(a)||tot(b)-tot(a))[0];vtxt='regret '+(-g(W)).toFixed(1);msg=`${co(W)} is the least objectionable move (worst-off voter's regret ${(-g(W)).toFixed(1)}).`;res=[...pool].sort((a,b)=>g(b)-g(a)).slice(0,5).map(x=>R(x,'regret '+(-g(x)).toFixed(1),Math.max(.05,Math.min(1,1+g(x)/10))))}
+else if(prog.id=='wgt'){const w=pick.map((p,k)=>Math.max(.5,Math.min(3,val(k,p)/3))),m=new Map(),tw=w.reduce((a,b)=>a+b,0);pick.forEach((p,k)=>m.set(p,(m.get(p)||0)+w[k]));W=best_(m);vtxt=m.get(W).toFixed(1)+' wt';msg=`${co(W)} wins with ${m.get(W).toFixed(1)} of ${tw.toFixed(1)} weighted votes.`;res=top(m,(x,n)=>R(x,n.toFixed(1)+' wt',n/tw))}
+else{const d=prog.id=='dic'?(moves.length>>1)%n7:Math.floor(Math.random()*n7);W=pick[d];vtxt=V[d].n;msg=prog.id=='dic'?`👑 ${V[d].n} rules this turn: ${co(W)}.`:`🎲 ${V[d].n} was drawn by lot: ${co(W)}.`;res=[{x:W,t:V[d].n,f:1,ch:[d]}]}
+say('System',msg,'',1);
+showVotes(`🏛️ Council · ${prog.e} ${prog.n}`,res,W);
+await sleep(500);commit(W,2,vtxt);if(W<0)say('Council','passes.','#888',1);busy=false;ui();render();openBallot()}
+function showTab(t){document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t==t));['bl','feed','votes','log'].forEach(id=>$(id).hidden=id!=t)}
+function showVotes(t,res,W){$('votes').innerHTML=`<div class="mu" style="margin-bottom:6px">${t}</div>`+res.map(r=>`<div class="row"><b style="width:52px" class="${r.x==W?'win':''}">${co(r.x)}</b><div class="bx"><div class="fl" style="width:${r.f*100}%"></div><div class="ch">${r.you?'<i class="dot" title="You" style="background:#111;border:2px solid #fff"></i>'.repeat(r.you):''}${r.ch.map(k=>`<i class="dot" title="${V[k].n}" style="background:${V[k].c}"></i>`).join('')}</div></div><span style="min-width:60px;text-align:right">${r.t}</span></div>`).join('')}
+function makeBallot(){const t0=B.filter(x=>x).length,cands=[];for(let i=0;i<N*N;i++){const f=feats(B,i,1,last);if(f)cands.push([i,f])}const F=new Map(cands);
+const sc=V.map(v=>{const m=new Map();for(const[i,f]of cands)m.set(i,v.s(f,t0)+Math.random()*.7);return m});
+const picks=V.map((_,k)=>{let bi=-1,bv=-1e9;for(const[i,x]of sc[k])if(x>bv){bv=x;bi=i}return bv<1.2||!cands.length?-1:bi});
+const g=new Map();picks.forEach((p,k)=>g.set(p,[...(g.get(p)||[]),k]));
+const opts=[...g].map(([x,vs])=>({x,vs,tot:vs.reduce((s,k)=>s+(x<0?1.2:sc[k].get(x)),0),why:vs.map(k=>V[k].n+': '+(x<0?'nothing worth playing':why(F.get(x),V[k]))).join(' · ')}));
+opts.sort((a,b)=>b.vs.length-a.vs.length||b.tot-a.tot);if(!opts.some(o=>o.x<0))opts.push({x:-1,vs:[],tot:0,why:'End your turn without playing.'});return{opts,picks}}
+function openBallot(){const el=$('bl');if(over||busy||turn!=1||mode=='free'){bal=null;el.innerHTML=mode=='free'?'<div class="mu">Free play: click any point on the board.</div>':'<div class="mu">Waiting for your turn…</div>';render();return}
+bal=makeBallot();sel=null;props=new Map();
+el.innerHTML=`<div class="mu" style="margin-bottom:6px">Your assembly of seven advisors proposes. <b>Pick one and cast your vote</b> (or click a lettered ring on the board).</div>`+bal.opts.map((o,k)=>`<label class="bo"><input type="radio" name="bal" value="${o.x}"><b class="lt">${'ABCDEFGH'[k]}</b><span><b>${co(o.x)}</b> ${o.vs.map(j=>`<i class="dot" style="background:${V[j].c};width:10px;height:10px"></i>`).join('')}<br><span class="mu">${o.why}</span></span></label>`).join('')+`<button class="pr" id="cast" disabled style="width:100%;margin-top:8px">Cast my vote</button>`;
+showTab('bl');render();ui()}
+function selOpt(k){const r=document.querySelectorAll('input[name=bal]')[k];if(!r)return;r.checked=true;sel=bal.opts[k].x;$('cast').disabled=false;render()}
+function cast(){if(!bal||sel===null||busy||over)return;const{opts,picks}=bal,tot=x=>(opts.find(o=>o.x==x)||{tot:0}).tot,pm=PL.find(p=>p.id==mode);let W=sel,res,msg,vtxt='your vote';
+say('You',`vote for <b>${co(sel)}</b>.`,'#888');
+if(mode=='dir'){res=[{x:sel,t:'your vote',f:1,ch:[],you:1}];msg=`Direct democracy: your vote decides → ${co(W)}.`}
+else{const w=mode=='asm3'?3:1,m=new Map();picks.forEach(p=>m.set(p,(m.get(p)||0)+1));m.set(sel,(m.get(sel)||0)+w);W=[...m.keys()].sort((a,b)=>m.get(b)-m.get(a)||tot(b)-tot(a))[0];const T=V.length+w;vtxt=m.get(W)+'/'+T;
+res=[...m].sort((a,b)=>b[1]-a[1]).map(([x,n])=>({x,t:n+' votes',f:n/T,ch:picks.map((p,k)=>p==x?k:-1).filter(k=>k>=0),you:x==sel?w:0}));
+msg=W==sel?`Assembly + you: ${co(W)} wins ${vtxt} votes.`:`The assembly overruled you! ${co(W)} wins ${vtxt} votes.`}
+say('System',msg,'',1);showVotes(`🙋 Your assembly · ${pm.e} ${pm.n}`,res,W);bal=null;$('bl').innerHTML='';humanPlay(W,vtxt)}
+$('bl').addEventListener('change',e=>{if(e.target.name=='bal'){sel=+e.target.value;$('cast').disabled=false;render()}});
+$('bl').addEventListener('click',e=>{if(e.target.id=='cast')cast()});
+$('bd').addEventListener('click',e=>{const s=$('bd'),r=s.getBoundingClientRect(),vb=s.viewBox.baseVal,k=vb.width/r.width,cs=+s.dataset.cs,m=+s.dataset.m,x=Math.round(((e.clientX-r.left)*k-m)/cs),y=Math.round(((e.clientY-r.top)*k-m)/cs);if(x>=0&&y>=0&&x<N&&y<N){const i=y*N+x;if(mode=='free')humanPlay(i);else if(bal){const k=bal.opts.findIndex(o=>o.x==i);if(k>=0)selOpt(k);else say('System','Not on the ballot. Pick a lettered option, or switch to Free play.','',1)}}});
+$('bd').addEventListener('mousemove',e=>{const s=$('bd'),r=s.getBoundingClientRect(),vb=s.viewBox.baseVal,k=vb.width/r.width,cs=+s.dataset.cs,m=+s.dataset.m,x=Math.round(((e.clientX-r.left)*k-m)/cs),y=Math.round(((e.clientY-r.top)*k-m)/cs),g=x>=0&&y>=0&&x<N&&y<N?y*N+x:-1;if(g!=ghost){ghost=g;render()}});
+$('bd').addEventListener('mouseleave',()=>{ghost=-1;render()});
+$('ps').onclick=()=>{if(mode=='free')humanPlay(-1);else if(bal)selOpt(bal.opts.findIndex(o=>o.x<0))};$('nw').onclick=newGame;$('sz').onchange=newGame;
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.t));
+newGame();
+</script></body></html>
