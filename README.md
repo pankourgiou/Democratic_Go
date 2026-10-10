@@ -1,0 +1,1 @@
+Download the .html and double click it and play the Democratic version of famous Go game..you can choose the voting style plus there is multiple choice to pick-and-vote the move so it's still a Go game but with a political "style" point of view. Enjoy!
